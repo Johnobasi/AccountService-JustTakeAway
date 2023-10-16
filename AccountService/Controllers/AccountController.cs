@@ -36,11 +36,6 @@ public class AccountController : ControllerBase
 
             string authorizationHeader = Request.Headers["Authorization"].ToString();
             var account = await _accountRepository.GetUserAccountAsync(authorizationHeader, id);
-            if (account == null)
-            {
-                return NotFound("Account not found");
-            }
-
             return Ok(account);
         }
         catch (Exception ex)

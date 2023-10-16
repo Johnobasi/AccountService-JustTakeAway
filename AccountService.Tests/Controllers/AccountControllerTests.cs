@@ -22,24 +22,18 @@ public class AccountControllerTests
         {
             HttpContext = new DefaultHttpContext()
         };
-
     }
     [Fact]
     public async Task AccountController_Get_ReturnsOkResultAsync()
     {
-
         // Arrange
         var id = 1;
         var authorizationHeader = "Basic htrqSjG1ua4r28iqgfgWNA==";
         var account = new Account { Id = 1, EmailAddress = "test@example.com" };
-        var user = new User { FirstName = "John", LastName = "Doe" };
-        var addresses = new Addresses { ShippingAddress = new Address { Street = "123 Main St", Town = "City", Country = "US" }};
-
 
         _accountController.HttpContext.Request.Headers["Authorization"] = authorizationHeader;
-
         _mockAccountRepository.Setup(x => x.GetAccountAsync(authorizationHeader, id)).ReturnsAsync(account);
-
+        
         // Act
         var result = await _accountController.Get(id);
 
@@ -59,7 +53,6 @@ public class AccountControllerTests
         var authorizationHeader = "Basic htrqSjG1ua4r28iqgfgWNA==";
         _accountController.HttpContext.Request.Headers["Authorization"] = authorizationHeader;
         _mockAccountRepository.Setup(repo => repo.GetAccountAsync(authorizationHeader, id)).ThrowsAsync(new Exception("An error occurred while processing the request"));
-
 
         // Act
         var result = await _accountController.Get(id);
