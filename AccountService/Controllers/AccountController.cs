@@ -1,5 +1,6 @@
 ﻿using AccountService.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace AccountService.Controllers;
 
@@ -23,10 +24,12 @@ public class AccountController : ControllerBase
     // Authorization: Basic htrqSjG1ua4r28iqgfgWNA==
 
     [HttpGet]
-    public async Task<ActionResult<Models.Account>> Get(int id)
+    public async Task<ActionResult<Models.Account>> Get([Required] int id)
     {
         try
         {
+            _logger.LogInformation($"Getting account with id {id}");
+
             if (!ModelState.IsValid)
             {
                 return BadRequest("Invalid id parameter");
