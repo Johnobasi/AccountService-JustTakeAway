@@ -39,9 +39,6 @@ public class AccountControllerTests
         _accountController.HttpContext.Request.Headers["Authorization"] = authorizationHeader;
 
         _mockAccountRepository.Setup(x => x.GetAccountAsync(authorizationHeader, id)).ReturnsAsync(account);
-        _mockAccountRepository.Setup(x => x.GetUserAsync(authorizationHeader, account.UserId)).ReturnsAsync(user);
-        _mockAccountRepository.Setup(x => x.GetAddressesAsync(authorizationHeader, account.UserId)).ReturnsAsync(addresses);
-
 
         // Act
         var result = await _accountController.Get(id);

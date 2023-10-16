@@ -1,4 +1,7 @@
-﻿namespace AccountService.Repositories;
+﻿using AccountService.Constants;
+using AccountService.Exceptions;
+
+namespace AccountService.Repositories;
 
 /// <summary>
 /// A class representing a repository that can be queried for users and accounts.
@@ -8,6 +11,16 @@
 public class AccountRepository : IAccountRepository
 {
     private static readonly TimeSpan StubDelay = TimeSpan.FromMilliseconds(250);
+    private readonly IUserRepository _userRepository;
+    private readonly IAddressRepository _addressRepository;
+    private readonly IHttpContextAccessor _httpContext;
+    public AccountRepository(IUserRepository userRepository, IAddressRepository addressRepository, IHttpContextAccessor httpContext)
+    {
+        _userRepository = userRepository;
+        _addressRepository = addressRepository;
+        _httpContext = httpContext;
+
+    }
 
     public async Task<Account> GetAccountAsync(string authToken, int id)
     {
@@ -21,29 +34,23 @@ public class AccountRepository : IAccountRepository
         return Accounts.FirstOrDefault(a => a.Id == id);
     }
 
-    public async Task<User> GetUserAsync(string authToken, int userId)
+    public async Task<Models.Account> GetUserAccountAsync(string authToken, int id)
     {
-        if (!AuthTokens.Contains(authToken))
+        string authorizationHeader = GetAuthorizationHeader();
+        var account = await GetAccountAsync(authorizationHeader, id);
+        if (account == null)
         {
-            throw new UnauthorizedAccessException();
+            throw new UserFriendlyException(ErrorMessages.ACCOUNT_NOT_FOUND);
         }
+        var user = await _userRepository.GetUserAsync(authorizationHeader, account.UserId);
+        var addresses = await _addressRepository.GetAddressesAsync(authorizationHeader, account.UserId);
 
-        await Task.Delay(StubDelay);
+        Models.Account content = MapToAccountModel(account, user, addresses);
 
-        return Users.FirstOrDefault(u => u.Id == userId);
+        return content;
     }
 
-    public async Task<Addresses> GetAddressesAsync(string authToken, int userId)
-    {
-        if (!AuthTokens.Contains(authToken))
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        await Task.Delay(StubDelay);
-
-        return Addresses.FirstOrDefault(a => a.UserId == userId);
-    }
+    #region private fields
 
     private readonly string[] AuthTokens = new[]
     {
@@ -58,16 +65,32 @@ public class AccountRepository : IAccountRepository
         new Account() { Id = 3, UserId = 6, EmailAddress = "charles_m_burns@fission.com" }
     };
 
-    private readonly User[] Users = new[]
+    private string GetAuthorizationHeader()
     {
-        new User() { Id = 4, FirstName = "Bart", LastName = "Simpson", Age = 10 },
-        new User() { Id = 5, FirstName = "Homer", LastName = "Simpson", Age = 34 },
-        new User() { Id = 6, FirstName = "Charles", LastName = "Burns", Age = 81 },
-    };
+        string authorizationHeader = _httpContext.HttpContext.Request.Headers["Authorization"].ToString();
+        if (string.IsNullOrEmpty(authorizationHeader))
+        {
+            throw new UnauthorizedAccessException();
+        }
+        return authorizationHeader;
+    }
 
-    private readonly Addresses[] Addresses = new[]
+    private Models.Account MapToAccountModel(Account account, User user, Addresses addresses)
     {
-        new Addresses() { UserId = 5, ShippingAddress = new Address() { Street = "742 Evergreen Terrace", Town = "Springfield", Country = "USA" } },
-        new Addresses() { UserId = 6, ShippingAddress = new Address() { Street = "Springfield Power Plant", Town = "Springfield", Country = "USA" }, BillingAddress = new Address() { Street = "1000 Mammon Lane", Town = "Springfield", Country = "USA" } },
-    };
+        return new Models.Account
+        {
+            Id = account.Id,
+            AddressLines = new[]
+            {
+                    addresses.ShippingAddress.Street,
+                    addresses.ShippingAddress.Town,
+                    addresses.BillingAddress?.Country ?? string.Empty
+                },
+            Email = account.EmailAddress,
+            Forename = user.FirstName,
+            Surname = user.LastName
+        };
+    }
+
+    #endregion
 }

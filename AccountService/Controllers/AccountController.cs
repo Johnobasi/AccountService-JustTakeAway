@@ -1,6 +1,5 @@
 ﻿using AccountService.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
 
 namespace AccountService.Controllers;
 
@@ -35,18 +34,14 @@ public class AccountController : ControllerBase
                 return BadRequest("Invalid id parameter or id cannot be null");
             }
 
-            string authorizationHeader = GetAuthorizationHeader();
-            var account = await _accountRepository.GetAccountAsync(authorizationHeader, id);
+            string authorizationHeader = Request.Headers["Authorization"].ToString();
+            var account = await _accountRepository.GetUserAccountAsync(authorizationHeader, id);
             if (account == null)
             {
                 return NotFound("Account not found");
             }
 
-            var user = await _accountRepository.GetUserAsync(authorizationHeader, account.UserId);
-            var addresses = await _accountRepository.GetAddressesAsync(authorizationHeader, account.UserId);
-            Models.Account content = MapToAccountModel(account, user, addresses);
-
-            return Ok(content);
+            return Ok(account);
         }
         catch (Exception ex)
         {
@@ -55,33 +50,4 @@ public class AccountController : ControllerBase
         }
 
     }
-
-    #region private methods
-    private Models.Account MapToAccountModel(Account account, User user, Addresses addresses)
-    {
-        return new Models.Account
-        {
-            Id = account.Id,
-            AddressLines = new[]
-            {
-                    addresses.ShippingAddress.Street,
-                    addresses.ShippingAddress.Town,
-                    addresses.BillingAddress?.Country ?? string.Empty
-                },
-            Email = account.EmailAddress,
-            Forename = user.FirstName,
-            Surname = user.LastName
-        };
-    }
-
-    private string GetAuthorizationHeader()
-    {
-        string authorizationHeader = Request.Headers["Authorization"].ToString();
-        if (string.IsNullOrEmpty(authorizationHeader))
-        {
-            throw new UnauthorizedAccessException();
-        }
-        return authorizationHeader;
-    }
-    #endregion
 }
