@@ -15,7 +15,7 @@ public class AccountController : ControllerBase
     private readonly ILogger<AccountController> _logger;
     public AccountController(IAccountRepository accountRepository, ILogger<AccountController> logger)
     {
-         _accountRepository = accountRepository;
+        _accountRepository = accountRepository;
         _logger = logger;
     }
 
@@ -27,19 +27,21 @@ public class AccountController : ControllerBase
     {
         try
         {
-            var authorizationHeader = Request.Headers["Authorization"].ToString();
+            if (!ModelState.IsValid)
+            {
+                return BadRequest("Invalid id parameter");
+            }
+
+            string authorizationHeader = GetAuthorizationHeader();
             var account = await _accountRepository.GetAccountAsync(authorizationHeader, id);
+            if (account == null)
+            {
+                return NotFound("Account not found");
+            }
+
             var user = await _accountRepository.GetUserAsync(authorizationHeader, account.UserId);
             var addresses = await _accountRepository.GetAddressesAsync(authorizationHeader, account.UserId);
-
-            var content = new Models.Account
-            {
-                Id = account.Id,
-                AddressLines = new[] { addresses.ShippingAddress.Street, addresses.ShippingAddress.Town, addresses.BillingAddress.Country },
-                Email = account.EmailAddress,
-                Forename = user.FirstName,
-                Surname = user.LastName
-            };
+            Models.Account content = MapToAccountModel(account, user, addresses);
 
             return Ok(content);
         }
@@ -50,4 +52,33 @@ public class AccountController : ControllerBase
         }
 
     }
+
+    #region private methods
+    private Models.Account MapToAccountModel(Account account, User user, Addresses addresses)
+    {
+        return new Models.Account
+        {
+            Id = account.Id,
+            AddressLines = new[]
+            {
+                    addresses.ShippingAddress.Street,
+                    addresses.ShippingAddress.Town,
+                    addresses.BillingAddress?.Country ?? string.Empty
+                },
+            Email = account.EmailAddress,
+            Forename = user.FirstName,
+            Surname = user.LastName
+        };
+    }
+
+    private string GetAuthorizationHeader()
+    {
+        string authorizationHeader = Request.Headers["Authorization"].ToString();
+        if (string.IsNullOrEmpty(authorizationHeader))
+        {
+            throw new UnauthorizedAccessException();
+        }
+        return authorizationHeader;
+    }
+    #endregion
 }
