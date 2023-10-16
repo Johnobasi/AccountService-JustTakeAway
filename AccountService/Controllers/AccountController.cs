@@ -24,15 +24,15 @@ public class AccountController : ControllerBase
     // Authorization: Basic htrqSjG1ua4r28iqgfgWNA==
 
     [HttpGet]
-    public async Task<ActionResult<Models.Account>> Get([Required] int id)
+    public async Task<ActionResult<Models.Account>> Get(int id)
     {
         try
         {
             _logger.LogInformation($"Getting account with id {id}");
 
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid && id == 0)
             {
-                return BadRequest("Invalid id parameter");
+                return BadRequest("Invalid id parameter or id cannot be null");
             }
 
             string authorizationHeader = GetAuthorizationHeader();
