@@ -1,4 +1,5 @@
-﻿using AccountService.Repositories;
+﻿using AccountService.Extensions;
+using AccountService.Repositories;
 
 namespace AccountService;
 
@@ -14,10 +15,7 @@ public class Startup
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddMvc();
-        services.AddScoped<IAccountRepository, AccountRepository>();
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IAddressRepository, AddressRepository>();
-        services.AddHttpContextAccessor();
+        services.AddApplicationServices();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
